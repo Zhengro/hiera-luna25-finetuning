@@ -8,7 +8,7 @@
 set -e
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-DOCKER_IMAGE_TAG="finetune-hiera-3d-latest"
+DOCKER_IMAGE_TAG="finetune-hiera-3d-test-no-gpu"
 
 # Check if an argument is provided
 if [ "$#" -eq 1 ]; then
@@ -59,7 +59,6 @@ docker volume create "$DOCKER_NOOP_VOLUME" > /dev/null
 docker run --rm \
     --platform=linux/amd64 \
     --network none \
-    --gpus all \
     --volume "$INPUT_DIR":/input:ro \
     --volume "$OUTPUT_DIR":/output \
     --volume "$DOCKER_NOOP_VOLUME":/tmp \

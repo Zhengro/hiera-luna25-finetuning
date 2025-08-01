@@ -20,8 +20,8 @@ import SimpleITK
 
 from processor import MalignancyProcessor
 
-INPUT_PATH = Path("/input")
-OUTPUT_PATH = Path("/output")
+INPUT_PATH = Path("/opt/app/test/input")
+OUTPUT_PATH = Path("/opt/app/test/output")
 RESOURCE_PATH = Path("/opt/app/resources")
 
 
@@ -200,7 +200,7 @@ def run(mode="3D", model_name="finetune-hiera"):
     #     print(f.read())
 
     # Validate access to GPU
-    _show_torch_cuda_info()
+    # _show_torch_cuda_info()
 
     # Run your algorithm here
     processor = NoduleProcessor(ct_image_file=input_chest_ct,
@@ -268,6 +268,7 @@ def _show_torch_cuda_info():
 
 if __name__ == "__main__":
     mode = "3D"
+    # make sure the model is available in the results directory
     model_name = "finetune-hiera"
     raise SystemExit(run(mode=mode,
                          model_name=model_name))

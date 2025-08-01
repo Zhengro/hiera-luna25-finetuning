@@ -21,5 +21,6 @@ RUN python -m pip install \
 COPY --chown=user:user experiment_config.py dataloader.py processor.py inference.py /opt/app/
 COPY --chown=user:user models /opt/app/models
 COPY --chown=user:user results /opt/app/resources
+COPY --chown=user:user test /opt/app/test
 
 ENTRYPOINT ["python", "inference.py"]

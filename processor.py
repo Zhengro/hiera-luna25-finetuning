@@ -40,7 +40,7 @@ class MalignancyProcessor:
 
         if self.mode == "3D":
             self.model_3d = Hiera3D(
-                image_size=self.size_px, image_depth=self.depth_px, kind="finetuned").cuda()
+                image_size=self.size_px, image_depth=self.depth_px, kind="finetuned")
 
         self.model_root = "/opt/app/resources/"
 
@@ -104,14 +104,15 @@ class MalignancyProcessor:
             nodules.append(patch)
 
         nodules = np.array(nodules)
-        nodules = torch.from_numpy(nodules).cuda()
+        nodules = torch.from_numpy(nodules)
 
         ckpt = torch.load(
             os.path.join(
                 self.model_root,
                 self.model_name,
                 "best_metric_model.pth",
-            )
+            ),
+            map_location=torch.device("cpu")
         )
         model.load_state_dict(ckpt)
         model.eval()
