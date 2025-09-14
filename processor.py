@@ -10,7 +10,7 @@ import torch
 from torchvision.transforms import v2
 
 import dataloader
-from models.model_3d_hiera import Hiera3D
+from models.model_hiera import Hiera3D
 
 
 logging.basicConfig(

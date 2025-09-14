@@ -30,7 +30,7 @@ from tqdm import tqdm
 from dataloader import get_data_loader
 from experiment_config import config
 from mixup import MixUpBinary
-from models.model_3d_hiera import Hiera3D
+from models.model_hiera import Hiera3D
 from optimizer import construct_optimizer, get_lr_at_epoch, set_lr
 
 torch.backends.cudnn.deterministic = True

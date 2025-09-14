@@ -122,6 +122,9 @@ class Hiera3D(nn.Module):
 
 if __name__ == "__main__":
 
+    # Example usage:
+    # python -m hiera-luna25-finetuning.models.model_hiera
+
     IMG_SIZE, IMG_DEPTH = 64, 16
     model = Hiera3D(image_size=IMG_SIZE, image_depth=IMG_DEPTH)
     print(
