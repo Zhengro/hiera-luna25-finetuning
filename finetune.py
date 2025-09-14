@@ -1,4 +1,4 @@
-# Script for finetuning Hiera to classify a pulmonary nodule as benign or malignant.
+# Script for finetuning Hiera or vanilla ViT to classify a pulmonary nodule as benign or malignant.
 
 # Portions of this code are adapted from luna25-baseline-public
 # Source: https://github.com/DIAGNijmegen/luna25-baseline-public/blob/main/train.py
@@ -9,7 +9,7 @@ import warnings
 
 try:
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":16:8"
-    warnings.filterwarnings("ignore", category=FutureWarning, module='timm')
+    warnings.filterwarnings("ignore", category=FutureWarning, module="timm")
     import torchvision
     torchvision.disable_beta_transforms_warning()
 except Exception as e:
@@ -30,7 +30,8 @@ from tqdm import tqdm
 from dataloader import get_data_loader
 from experiment_config import config
 from mixup import MixUpBinary
-from models.model_hiera import Hiera3D
+from models.model_2d_vit import ViT2D
+from models.model_hiera import Hiera2D, Hiera3D
 from optimizer import construct_optimizer, get_lr_at_epoch, set_lr
 
 torch.backends.cudnn.deterministic = True
@@ -146,11 +147,15 @@ def finetune(train_csv_path, exp_save_root, valid_csv_path=None):
 
     device = torch.device("cuda:0")
 
-    if config.MODE == "3D":
+    if config.MODE == "3D" and "hiera" in config.EXPERIMENT_NAME.lower():
         model = Hiera3D(image_size=config.SIZE_PX,
                         image_depth=config.DEPTH_PX).to(device)
+    elif config.MODE == "2D" and "hiera" in config.EXPERIMENT_NAME.lower():
+        model = Hiera2D(image_size=config.SIZE_PX).to(device)
+    elif config.MODE == "2D" and "vit" in config.EXPERIMENT_NAME.lower():
+        model = ViT2D(image_size=config.SIZE_PX).to(device)
     else:
-        model = None
+        raise ValueError("Invalid MODE and/or EXPERIMENT_NAME.")
 
     logging.info("Number of parameters: %s", sum(p.numel()
                  for p in model.parameters()))
@@ -161,7 +166,8 @@ def finetune(train_csv_path, exp_save_root, valid_csv_path=None):
             logging.info("[Frozen] %s: %s", name, param.size())
 
     loss_function = torch.nn.BCEWithLogitsLoss()
-    optimizer = construct_optimizer(model.hiera)
+    optimizer = optimizer = construct_optimizer(
+        model.hiera) if "hiera" in config.EXPERIMENT_NAME.lower() else construct_optimizer(model)
     if config.MIXUP["ENABLE"]:
         mixup_fn = MixUpBinary(
             mixup_alpha=config.MIXUP["ALPHA"],
@@ -325,10 +331,10 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description="Specify training mode: 'k-fold' or 'all-data'.")
-    parser.add_argument('--k_fold', action='store_true',
-                        help='Enable k-fold cross-validation training mode.')
-    parser.add_argument('--all_data', action='store_true',
-                        help='Enable training mode using all available data.')
+    parser.add_argument("--k_fold", action="store_true",
+                        help="Enable k-fold cross-validation training mode.")
+    parser.add_argument("--all_data", action="store_true",
+                        help="Enable training mode using all available data.")
     args = parser.parse_args()
 
     save_root = config.EXPERIMENT_DIR / \

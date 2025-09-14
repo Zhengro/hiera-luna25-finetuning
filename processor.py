@@ -10,7 +10,8 @@ import torch
 from torchvision.transforms import v2
 
 import dataloader
-from models.model_hiera import Hiera3D
+from models.model_2d_vit import ViT2D
+from models.model_hiera import Hiera2D, Hiera3D
 
 
 logging.basicConfig(
@@ -38,9 +39,17 @@ class MalignancyProcessor:
         if not self.suppress_logs:
             logging.info("Initializing the deep learning system")
 
-        if self.mode == "3D":
+        if self.mode == "3D" and "hiera" in self.model_name.lower():
             self.model_3d = Hiera3D(
                 image_size=self.size_px, image_depth=self.depth_px, kind="finetuned").cuda()
+        elif self.mode == "2D" and "hiera" in self.model_name.lower():
+            self.model_2d = Hiera2D(
+                image_size=self.size_px, kind="finetuned").cuda()
+        elif self.mode == "2D" and "vit" in self.model_name.lower():
+            self.model_2d = ViT2D(image_size=self.size_px,
+                                  kind="finetuned").cuda()
+        else:
+            raise ValueError("Invalid mode and/or model_name.")
 
         self.model_root = "/opt/app/resources/"
 
@@ -94,7 +103,8 @@ class MalignancyProcessor:
             output_shape = [self.depth_px, self.size_px, self.size_px]
             model = self.model_3d
         else:
-            output_shape, model = None, None
+            output_shape = [1, self.size_px, self.size_px]
+            model = self.model_2d
 
         nodules = []
 

@@ -4,7 +4,7 @@
 
 try:
     import warnings
-    warnings.filterwarnings("ignore", category=FutureWarning, module='timm')
+    warnings.filterwarnings("ignore", category=FutureWarning, module="timm")
     import torchvision
     torchvision.disable_beta_transforms_warning()
 except Exception as e:

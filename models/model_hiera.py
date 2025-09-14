@@ -1,4 +1,4 @@
-# Hiera for 3D image classification
+# Hiera for 2D/3D image classification
 
 # References:
 # hiera: https://github.com/facebookresearch/hiera
@@ -68,6 +68,41 @@ class HieraFusionHead(MaskedAutoencoderHiera):
         return x
 
 
+class Hiera2D(nn.Module):
+    def __init__(self, image_size, kind="pretrained", num_classes=1, patch_size=4):
+        super().__init__()
+        assert kind in ["pretrained",
+                        "finetuned"], f"Unknown model kind: {kind}"
+        model = HieraFusionHead if config.FUSION_HEAD_ENABLED else Hiera
+        self.hiera = model(
+            num_classes=num_classes,
+            input_size=(image_size, image_size),
+            drop_path_rate=config.DROP_PATH_RATE,
+            head_dropout=config.HEAD_DROPOUT,
+            head_init_scale=config.HEAD_INIT_SCALE,
+            q_pool=2 if config.FUSION_HEAD_ENABLED else 3
+        )
+        # disable softmax in head for eval and testing
+        self.hiera.head.act_func = nn.Identity()
+
+        if kind == "pretrained":
+            state_dict = get_pretrained_model()
+            if "model_state" in state_dict:
+                state_dict = state_dict["model_state"]
+
+            new_state_dict = interpolate_embeddings_spatial(
+                image_size=image_size,
+                patch_size=patch_size,
+                model_state=state_dict,
+                pos_embedding_key="pos_embed"
+            )
+
+            self.hiera.load_state_dict(new_state_dict, strict=False)
+
+    def forward(self, x):
+        return self.hiera(x)
+
+
 class Hiera3D(nn.Module):
     def __init__(self, image_size, image_depth, kind="pretrained", num_classes=1, patch_size=4, patch_depth=2):
         super().__init__()
@@ -109,10 +144,6 @@ class Hiera3D(nn.Module):
                 patch_depth=patch_depth,
                 model_state=new_state_dict
             )
-            if "head.projection.weight" in new_state_dict and \
-                    num_classes != new_state_dict["head.projection.weight"].shape[0]:
-                del new_state_dict["head.projection.weight"]
-                del new_state_dict["head.projection.bias"]
 
             self.hiera.load_state_dict(new_state_dict, strict=False)
 
@@ -125,10 +156,16 @@ if __name__ == "__main__":
     # Example usage:
     # python -m hiera-luna25-finetuning.models.model_hiera
 
-    IMG_SIZE, IMG_DEPTH = 64, 16
-    model = Hiera3D(image_size=IMG_SIZE, image_depth=IMG_DEPTH)
-    print(
-        f"Output shape: {model(torch.randn(1, 3, IMG_DEPTH, IMG_SIZE, IMG_SIZE)).shape}")
+    IMG_SIZE, IMG_DEPTH, MODE = 64, 16, "3D"
+    print(f"{MODE} Hiera:")
+    if MODE == "3D":
+        model = Hiera3D(image_size=IMG_SIZE, image_depth=IMG_DEPTH)
+        print(
+            f"Output shape: {model(torch.randn(1, 3, IMG_DEPTH, IMG_SIZE, IMG_SIZE)).shape}")
+    else:
+        model = Hiera2D(image_size=IMG_SIZE)
+        print(
+            f"Output shape: {model(torch.randn(1, 3, IMG_SIZE, IMG_SIZE)).shape}")
     print(
         f"Number of parameters: {sum(p.numel() for p in model.parameters())}")
     for name, param in model.named_parameters():

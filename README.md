@@ -1,6 +1,6 @@
 # Finetuning Hiera on LUNA25 3D Patches
 
-[![Python 3.9](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/)
 [![Code License](https://img.shields.io/badge/code_license-Apache_2.0-olive)](https://opensource.org/licenses/Apache-2.0)
 
 This work, participating in the [LUNA25 Challenge](https://luna25.grand-challenge.org/), finetuned Hiera for lung nodule malignancy risk estimation.
@@ -28,6 +28,12 @@ rm luna25_nodule_blocks.zip.001 luna25_nodule_blocks.zip.002
 ```
 
 ### Perform Training
+Before starting the training, ensure that the correct `experiment_config.py` is in the project root directory.
+
+By default, `experiment_config.py` is a copy of `configs/experiment_config_3d_hiera.py`, which represents the submitted version for the LUNA25 Challenge. To train 2D models, copy one of the available config files:
+```
+cp hiera-luna25-finetuning/configs/experiment_config_XXX.py hiera-luna25-finetuning/experiment_config.py
+```
 When training using k-fold cross validation, set `kind="k-fold"` in `experiment_config.py` then run
 ```
 python hiera-luna25-finetuning/split_data.py

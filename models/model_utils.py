@@ -176,7 +176,16 @@ def get_pretrained_model():
     Get the state dictionary for the pretrained model.
     """
     config.RESOURCES.mkdir(parents=True, exist_ok=True)
-    pretrained_model_url = config.PRETRAINED_MODEL_CONFIGS[config.PRETRAINED_MODEL]["mae_k400"]
+    pretrained_model_config = config.PRETRAINED_MODEL_CONFIGS[config.PRETRAINED_MODEL]
+    if config.MODE == "3D" and "hiera" in config.EXPERIMENT_NAME.lower():
+        pretrained_model_url = pretrained_model_config["mae_k400"]
+    elif config.MODE == "2D" and "hiera" in config.EXPERIMENT_NAME.lower():
+        pretrained_model_url = pretrained_model_config["mae_in1k"]
+    elif config.MODE == "2D" and "vit" in config.EXPERIMENT_NAME.lower():
+        pretrained_model_url = pretrained_model_config["DEFAULT"]
+    else:
+        raise ValueError(
+            "Invalid pretrained model configuration. Please check MODE and EXPERIMENT_NAME.")
     local_pretrained_model_path = config.RESOURCES / \
         Path(pretrained_model_url).name
     if not local_pretrained_model_path.exists():

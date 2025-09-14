@@ -222,7 +222,7 @@ class CTCaseDataset(data.Dataset):
         rotations: tuple = None,
         size_px: int = 64,
         size_mm: int = 50,
-        mode: str = "2D",
+        mode: str = "3D",
     ):
 
         self.data_dir = Path(data_dir)
@@ -337,7 +337,7 @@ def extract_patch(
     rotations=None,
     translations=None,
     coord_space_world=False,
-    mode="2D",
+    mode="3D",
 ):
 
     transform_matrix = np.eye(3)
@@ -418,7 +418,7 @@ def extract_patch(
 def get_data_loader(
     data_dir,
     dataset,
-    mode="2D",
+    mode="3D",
     sampler=None,
     workers=0,
     batch_size=64,
