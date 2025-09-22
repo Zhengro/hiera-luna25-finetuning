@@ -9,6 +9,7 @@ import math
 from pathlib import Path
 import urllib.request
 
+import numpy as np
 import torch
 from torch import nn
 from tqdm import tqdm
@@ -23,6 +24,81 @@ except ImportError:
         sys.path.append(project_root)
 
     from experiment_config import config
+
+
+def hack_embeddings_spatial(
+    image_size: int,
+    patch_size: int,
+    model_state: "OrderedDict[str, torch.Tensor]",
+    pos_embedding_key: str = "pos_embed_spatial",
+) -> "OrderedDict[str, torch.Tensor]":
+    """
+    Attempt to fix the bug in original Hiera.
+
+    Bug: https://arxiv.org/pdf/2311.05613
+
+    Adapted from:
+    https://github.com/facebookresearch/sam2/blob/main/sam2/modeling/backbones/hieradet.py
+
+    Args:
+        image_size (int): Image size of the new model.
+        patch_size (int): Patch size of the new model.
+        model_state (OrderedDict[str, torch.Tensor]): State dict of the pretrained Hiera-L.
+        pos_embedding_key (str): Key of the position embedding in the state dict.
+                                 Default: pos_embed_spatial.
+
+    Returns:
+        OrderedDict[str, torch.Tensor]: A state dict which can be loaded into the new model.
+    """
+    pos_embedding = model_state[pos_embedding_key]
+    n, seq_length, hidden_dim = pos_embedding.shape
+    if n != 1:
+        raise ValueError(
+            f"Unexpected position embedding shape: {pos_embedding.shape}")
+
+    new_seq_length = (image_size // patch_size) ** 2
+
+    if new_seq_length != seq_length:
+        new_seq_length_1d = image_size // patch_size
+
+        if not config.HACK["NPY_DIR_POS_EMBED"].exists() and not config.HACK["NPY_DIR_POS_EMBED_WINDOW"].exists():
+            pretrained_model_strs = config.PRETRAINED_MODEL.split("_")
+            model_name = "_".join(pretrained_model_strs[1:-1])
+            model_url = None
+            for k, v in config.HACK.items():
+                head, sep, tail = k.partition("_")
+                if sep and model_name == tail:
+                    model_url = v["checkpoint"]
+            if model_url is None:
+                raise ValueError(
+                    f"{config.PRETRAINED_MODEL} is not supported in HACK.")
+            state_dict = get_pretrained_model(model_url)
+            state_dict = state_dict["model"]
+            # for k in state_dict.keys():
+            #     if "image_encoder" in k:
+            #         print(k)
+            pos_embed = state_dict["image_encoder.trunk.pos_embed"]
+            pos_embed_window = state_dict["image_encoder.trunk.pos_embed_window"]
+            np.save(config.HACK["NPY_DIR_POS_EMBED"],
+                    pos_embed.detach().cpu().numpy())
+            np.save(config.HACK["NPY_DIR_POS_EMBED_WINDOW"],
+                    pos_embed_window.detach().cpu().numpy())
+
+        pos_embed = torch.from_numpy(np.load(config.HACK["NPY_DIR_POS_EMBED"]))
+        pos_embed_window = torch.from_numpy(
+            np.load(config.HACK["NPY_DIR_POS_EMBED_WINDOW"]))
+
+        pos_embed = nn.functional.interpolate(pos_embed, size=(
+            new_seq_length_1d, new_seq_length_1d), mode="bicubic")
+        pos_embed = pos_embed + \
+            pos_embed_window.tile(
+                [x // y for x, y in zip(pos_embed.shape, pos_embed_window.shape)])
+        pos_embed = pos_embed.permute(0, 2, 3, 1)
+
+        pos_embed = pos_embed.reshape(n, new_seq_length, hidden_dim)
+        model_state[pos_embedding_key] = pos_embed
+
+    return model_state
 
 
 def interpolate_embeddings_spatial(
@@ -171,11 +247,10 @@ def download_file_with_progress(url, destination_path: Path):
     print("Download complete!")
 
 
-def get_pretrained_model():
+def get_model_url():
     """
-    Get the state dictionary for the pretrained model.
+    Get the URL for the pretrained model based on the configuration.
     """
-    config.RESOURCES.mkdir(parents=True, exist_ok=True)
     pretrained_model_config = config.PRETRAINED_MODEL_CONFIGS[config.PRETRAINED_MODEL]
     if config.MODE == "3D" and "hiera" in config.EXPERIMENT_NAME.lower():
         pretrained_model_url = pretrained_model_config["mae_k400"]
@@ -186,6 +261,16 @@ def get_pretrained_model():
     else:
         raise ValueError(
             "Invalid pretrained model configuration. Please check MODE and EXPERIMENT_NAME.")
+    return pretrained_model_url
+
+
+def get_pretrained_model(pretrained_model_url=None):
+    """
+    Get the state dictionary for the pretrained model.
+    """
+    if pretrained_model_url is None:
+        pretrained_model_url = get_model_url()
+    config.RESOURCES.mkdir(parents=True, exist_ok=True)
     local_pretrained_model_path = config.RESOURCES / \
         Path(pretrained_model_url).name
     if not local_pretrained_model_path.exists():

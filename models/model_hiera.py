@@ -21,7 +21,7 @@ except ImportError:
 
     from experiment_config import config
 
-from .model_utils import interpolate_embeddings_spatial, interpolate_embeddings_temporal, get_pretrained_model
+from .model_utils import hack_embeddings_spatial, interpolate_embeddings_spatial, interpolate_embeddings_temporal, get_pretrained_model
 
 
 class HieraFusionHead(MaskedAutoencoderHiera):
@@ -134,11 +134,17 @@ class Hiera3D(nn.Module):
             if "model_state" in state_dict:
                 state_dict = state_dict["model_state"]
 
-            new_state_dict = interpolate_embeddings_spatial(
-                image_size=image_size,
-                patch_size=patch_size,
-                model_state=state_dict
-            )
+            if config.HACK["ENABLE"]:
+                new_state_dict = hack_embeddings_spatial(
+                    image_size=image_size,
+                    patch_size=patch_size,
+                    model_state=state_dict)
+            else:
+                new_state_dict = interpolate_embeddings_spatial(
+                    image_size=image_size,
+                    patch_size=patch_size,
+                    model_state=state_dict
+                )
             new_state_dict = interpolate_embeddings_temporal(
                 image_depth=image_depth,
                 patch_depth=patch_depth,

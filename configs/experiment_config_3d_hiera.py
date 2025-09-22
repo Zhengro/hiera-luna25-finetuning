@@ -24,6 +24,7 @@ class Configuration(object):
         # Results will be saved in the results directory
         # inside a subfolder named according to the specified EXPERIMENT_NAME and MODE.
         self.EXPERIMENT_DIR = self.WORKDIR / "results"
+        self.CONFIGS_DIR = self.WORKDIR / "configs"
         if kind != "submission":
             self.EXPERIMENT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -87,6 +88,24 @@ class Configuration(object):
             }
         }
         self.FUSION_HEAD_ENABLED = False
+        # Attemp to fix the bug (https://arxiv.org/pdf/2311.05613)
+        self.HACK = {
+            "ENABLE": False,
+            "NPY_DIR_POS_EMBED": self.CONFIGS_DIR / "pos_embed.npy",
+            "NPY_DIR_POS_EMBED_WINDOW": self.CONFIGS_DIR / "pos_embed_window.npy",
+            "sam2.1_hiera_tiny": {
+                "checkpoint": "https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_tiny.pt"
+            },
+            "sam2.1_hiera_small": {
+                "checkpoint": "https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_small.pt"
+            },
+            "sam2.1_hiera_base_plus": {
+                "checkpoint": "https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_base_plus.pt"
+            },
+            "sam2.1_hiera_large": {
+                "checkpoint": "https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_large.pt"
+            }
+        }
 
         # Solver
         self.OPTIMIZING_METHOD = "adamw"
