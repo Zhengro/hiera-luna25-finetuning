@@ -5,6 +5,8 @@
 
 This work, participating in the [LUNA25 Challenge](https://luna25.grand-challenge.org/), finetuned Hiera for lung nodule malignancy risk estimation.
 
+A summary of top 3 solutions in the testing phase can be found in [methods](methods.md).
+
 ## Usage
 ### Set Up
 ```
